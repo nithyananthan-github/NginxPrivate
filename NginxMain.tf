@@ -324,7 +324,7 @@ resource "aws_lb" "my_alb" {
 }
 
 
-# Create ALB listeners
+# Create ALB listeners for HTTP
 resource "aws_lb_listener" "http_listener" {
   load_balancer_arn = aws_lb.my_alb.arn
   port              = 80
@@ -357,15 +357,38 @@ resource "aws_lb_target_group_attachment" "my_instance_attachment" {
   port             = 80
 }
 
+# certificate 
+data "aws_acm_certificate" "existing_certificate" {
+  domain     = "*.cozietech.ca"    
+  statuses = ["ISSUED"]
+}
+
+# create ALB listeners for HTTPS
+
+resource "aws_lb_listener" "https_listener" {
+  load_balancer_arn = aws_lb.my_alb.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  # certificate_arn = "arn:aws:acm:ca-central-1:094508731424:certificate/349cb37b-b172-4f67-8216-8d4496e85d53"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.my_target_group.arn
+  }
+}
+
+resource "aws_lb_listener_certificate" "https_listener_certificate" {
+  listener_arn    = aws_lb_listener.https_listener.arn
+  certificate_arn = data.aws_acm_certificate.existing_certificate.arn
+}
+
 
 
 
 
 
 # Create AZ2 and public instance 
-
-
-
 
 # create public subnet az2
 resource "aws_subnet" "public_subnet_az2" {
